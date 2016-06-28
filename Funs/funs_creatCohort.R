@@ -119,3 +119,46 @@ merge4withGradCatiVars <- function(var, dtCoh, threshold){
   }
   return(vct)
 }
+
+
+getVarType <- function(dt, varLst){
+  varClass <- sapply(dt, function(x)class(x))
+  lgVars <- varLst[varClass=="logical"] #2 vars are all NA
+  charVars <- varLst[varClass %in% c("character", "factor")] #5
+  numVars <- varLst[varClass %in% c('numeric', 'integer')] #406
+  typeList <- list(lgVars=lgVars, charVars=charVars, numVars=numVars)
+  return(typeList)
+}
+
+
+getDummy <- function(temp_fct){
+  options(na.action="na.pass")
+  lvsCnt <- sapply(temp_fct, function(x){length(levels(x))})
+  var1lvs <- names(lvsCnt[lvsCnt<2])
+  var2dummy <- setdiff(names(temp_fct), var1lvs)
+  dummy <- 
+    model.matrix( ~ .
+                  , data=temp_fct[, var2dummy]
+                  , contrasts.arg = 
+                    lapply(temp_fct[, var2dummy]
+                           , contrasts, contrasts=FALSE)
+                  , na.action=na.pass
+    )[, -1]
+  feakRows <- 2
+  feakDt <- temp_fct[1:feakRows, var1lvs]
+  feakDt[,] <- 999
+  feakDt2dummy <- rbind(feakDt, temp_fct[, var1lvs])
+  feakDt2dummy <- as.data.frame(unclass(feakDt2dummy))
+  dummy1lvs <- 
+    model.matrix( ~ .
+                  , data=feakDt2dummy
+                  , contrasts.arg = 
+                    lapply(feakDt2dummy
+                           , contrasts, contrasts=FALSE)
+                  , na.action=na.pass
+    )[, -1]
+  dummy1lvsRm999 <- dummy1lvs[-(1:feakRows), !grepl("999$", colnames(dummy1lvs))]
+  dummyAll <- as.data.frame(cbind(dummy, dummy1lvsRm999))
+  return(dummyAll)
+}
+
