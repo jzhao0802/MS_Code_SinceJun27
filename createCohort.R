@@ -1,12 +1,13 @@
 rm(list=ls())
+library(plyr)
 library(dplyr)
 library(caret)
 # 001 create cohort table
 
 # 
 main.wkDir <- "./"
-setwd(main.wk_dir)
-
+setwd(main.wkDir)
+source("./Funs/funs_creatCohort.R")
 # main.inDir <- paste0(main.wkDir, '../01_Data/')
 main.inDir <- "F:\\Jie\\MS\\01_Data\\"
 
@@ -34,27 +35,28 @@ main.varDefCati <- c("idx_rx", 'gender', 'birth_region', 'init_symptom')
 
 main.threshold4merge <- 0.1
 
-outDir <- main.outDir
-inDir <- main.inDir
-cohortLst <- main.cohortLst
-outcomeLst <- main.outcomeLst
-bCati <- main.bCati
-bTest <- main.bTest
-inFileNm <- main.inFileNm
-inFileExt <- main.inFileExt
-na_represents <- main.na_represents
-varDefCati <- main.varDefCati
-threshold4merge <- main.threshold4merge
+# outDir <- main.outDir
+# inDir <- main.inDir
+# cohortLst <- main.cohortLst
+# outcomeLst <- main.outcomeLst
+# bCati <- main.bCati
+# bTest <- main.bTest
+# inFileNm <- main.inFileNm
+# inFileExt <- main.inFileExt
+# na_represents <- main.na_represents
+# varDefCati <- main.varDefCati
+# threshold <- main.threshold4merge
 
 createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
                            , cohortLst, outcomeLst, bTransf, na_represents
-                           , varDefCati, threshold4merge, bTest){
+                           , varDefCati, threshold, bTest){
 
   dt <- read.table(paste0(inDir, inFileNm, inFileExt)
                    , sep=','
                    , header = T
                    , stringsAsFactors = F
                    , na.strings = na_represents)
+  cat("data readin successfully!\n")
   if(bTest == T){
     dt = dt[1:1000, ]
   }
@@ -64,6 +66,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
   
   # for a certain cohort, for those duplicated ptid , randomly select one line
   for(cohort in cohortLst){
+    cat('cohort:', cohort, ' start!\n')
     if(cohort == 5){
       dtCoh <- dt
     }else if(cohort %in% 1:4){
@@ -74,16 +77,17 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCoh <- dtCoh %>%
       select(-idx_dt) %>%
       select(-firstdt) %>%
-      select(-idxyr)
+      select(-idxyr) %>%
       group_by(new_pat_id) %>%
       do(sample_n(., 1)) %>%
 #       select(-new_pat_id) %>%
       select(-tblcoh)
     varLst <- names(dtCoh)
+    cat('line sample for duplicated patid!\n')
     
     cohortNm <- ifelse(cohort==1, "BConti"
                        , ifelse(cohort==2, "B2B"
-                                , ifelse(cohort== "B2Fir"
+                                , ifelse(cohort==3, "B2Fir"
                                          , ifelse(cohort==4, "B2Sec"
                                                   , ifelse(cohort==5, "Cmp", step("wrong cohort index!\n"))))))
     
@@ -141,11 +145,14 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCoh$pre_dmts_2 <- apply(dtCoh_forDmts[, var_preDmt_2], 1, sum, na.rm=T)
     dtCoh$pre_dmts_3 <- apply(dtCoh_forDmts[, var_preDmt_3], 1, sum, na.rm=T)
     dtCoh$pre_dmts_4 <- apply(dtCoh_forDmts[, var_preDmt_4], 1, sum, na.rm=T)
-    
+    cat('pre_dmts get successfully!\n')
     dim(dtCoh) #[1] 383 412
     varLst_f1 <- names(dtCoh)
     flag <- "withoutTransf"
+    
     if(bTransf==T){
+      cat('bTransf:', bTransf, '\n')
+      
       flag <- "withTransf"
       varClfList <- varClassify(dtCoh)
       varDefCati <- c("idx_rx", 'gender', 'birth_region', 'init_symptom')
@@ -170,21 +177,20 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
       }), quickdf)))
       
       names(dt2quartile) <- var2quartileBnumeric
+      cat('for var2quartileBnumeric, brak into quartile successfully!\n')
       
       var2quartileBchar <- setdiff(var2quartile, var2quartileBnumeric)
-      
-      threshold <- 0.1
       
       dt2mergeGrad <- as.data.frame(t(ldply(lapply(var2quartileBchar
                                                    , function(var)merge4withGradCatiVars(var, dtCoh, threshold))
                                             , quickdf)))
       names(dt2mergeGrad) <- var2quartileBchar
-      
+      cat("for var2quartileBchar, mergeGrad successfully!\n")
       dt2merge <- as.data.frame(t(ldply(lapply(var2merge
                                                , function(var)merge4CatiVars(var, dtCoh, threshold ))
                                         , quickdf)))
       names(dt2merge) <- var2merge
-      
+      cat("for var2merge, mergeWithoutGrad successfully!\n")
       dtCoh <- as.data.frame(
         cbind(dt2quartile
               , dt2mergeGrad
@@ -205,7 +211,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
       varNumB2dummy <- setdiff(numVars[b2dummy], "new_pat_id")
       
       charVars <- c(charVars, varNumB2dummy)
-      
+      cat('for bTransf==T, add varNumB2dummy into charVars wich will be dummy later!\n')
     }
     # other numeric columns should be transformed into dummy
     
@@ -229,7 +235,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCohFinal1 <- bind_cols(dtCohChar2Fct2Dummy
                             , dtCoh[, setdiff(varLst_f1, charVars)]) %>%
       as.data.frame(.)
-    
+    cat("dummy final!\n")
     re <- lapply(outcomeLst, function(outcome){
       dtCohFinal1$response <- dtCohFinal1[, outcome]
       # remove outcome varibles list
@@ -241,7 +247,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
                   , row.names = F)
       return("export cohort successfully!\n")
     })
-    
+    cat("export final 6 tables successfully!\n")
     
   }
   
@@ -257,7 +263,7 @@ createCohortTb(inDir=main.inDir
                , bTransf=main.bTransf
                , na_represents=main.na_represents
                , varDefCati=main.varDefCati
-               , threshold4merge=main.threshold4merge
+               , threshold=main.threshold4merge
                , bTest=main.bTest)
 
 
