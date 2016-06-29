@@ -74,6 +74,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCoh <- dtCoh %>%
       select(-idx_dt) %>%
       select(-firstdt) %>%
+      select(-idxyr)
       group_by(new_pat_id) %>%
       do(sample_n(., 1)) %>%
 #       select(-new_pat_id) %>%
