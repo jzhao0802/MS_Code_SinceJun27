@@ -141,7 +141,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCoh$pre_dmts_3 <- apply(dtCoh_forDmts[, var_preDmt_3], 1, sum, na.rm=T)
     dtCoh$pre_dmts_4 <- apply(dtCoh_forDmts[, var_preDmt_4], 1, sum, na.rm=T)
     
-    dim(dtCoh) #[1] 383 413
+    dim(dtCoh) #[1] 383 412
     varLst_f1 <- names(dtCoh)
     flag <- "withoutTransf"
     if(bTransf==T){
@@ -172,12 +172,13 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
       
       var2quartileBchar <- setdiff(var2quartile, var2quartileBnumeric)
       
+      threshold <- 0.1
+      
       dt2mergeGrad <- as.data.frame(t(ldply(lapply(var2quartileBchar
                                                    , function(var)merge4withGradCatiVars(var, dtCoh, threshold))
                                             , quickdf)))
       names(dt2mergeGrad) <- var2quartileBchar
       
-      threshold <- 0.1
       dt2merge <- as.data.frame(t(ldply(lapply(var2merge
                                                , function(var)merge4CatiVars(var, dtCoh, threshold ))
                                         , quickdf)))
@@ -194,15 +195,18 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     
     varTypeLst <- getVarType(dt=dtCoh, varLst = colnames(dtCoh))
     charVars <- varTypeLst$charVars
-    numVars <- varTypeLst$numVars
+    if(bTransf==T){
+      numVars <- varTypeLst$numVars
+      b2dummy <- sapply(dtCoh[,numVars], function(x){
+        lvs <- unique(x)
+        length(setdiff(lvs, c(0, 1, NA))) > 0 & sum(!is.na(lvs)) < 3
+      })
+      varNumB2dummy <- setdiff(numVars[b2dummy], "new_pat_id")
+      
+      charVars <- c(charVars, varNumB2dummy)
+      
+    }
     # other numeric columns should be transformed into dummy
-    b2dummy <- sapply(dtCoh[,numVars], function(x){
-      lvs <- unique(x)
-      length(setdiff(lvs, c(0, 1, NA))) > 0
-    })
-    varNumB2dummy <- setdiff(numVars[b2dummy], "new_pat_id")
-    
-    charVars <- c(charVars, varNumB2dummy)
     
     dtCohChar <- as.data.frame(dtCoh[, charVars])
     
