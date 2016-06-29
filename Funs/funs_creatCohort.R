@@ -144,21 +144,27 @@ getDummy <- function(temp_fct){
                            , contrasts, contrasts=FALSE)
                   , na.action=na.pass
     )[, -1]
-  feakRows <- 2
-  feakDt <- temp_fct[1:feakRows, var1lvs]
-  feakDt[,] <- 999
-  feakDt2dummy <- rbind(feakDt, temp_fct[, var1lvs])
-  feakDt2dummy <- as.data.frame(unclass(feakDt2dummy))
-  dummy1lvs <- 
-    model.matrix( ~ .
-                  , data=feakDt2dummy
-                  , contrasts.arg = 
-                    lapply(feakDt2dummy
-                           , contrasts, contrasts=FALSE)
-                  , na.action=na.pass
-    )[, -1]
-  dummy1lvsRm999 <- dummy1lvs[-(1:feakRows), !grepl("999$", colnames(dummy1lvs))]
-  dummyAll <- as.data.frame(cbind(dummy, dummy1lvsRm999))
+  if(length(var1lvs)>0){
+    feakRows <- 2
+    feakDt <- temp_fct[1:feakRows, var1lvs]
+    feakDt[,] <- 999
+    feakDt2dummy <- rbind(feakDt, temp_fct[, var1lvs])
+    feakDt2dummy <- as.data.frame(unclass(feakDt2dummy))
+    dummy1lvs <- 
+      model.matrix( ~ .
+                    , data=feakDt2dummy
+                    , contrasts.arg = 
+                      lapply(feakDt2dummy
+                             , contrasts, contrasts=FALSE)
+                    , na.action=na.pass
+      )[, -1]
+    dummy1lvsRm999 <- dummy1lvs[-(1:feakRows), !grepl("999$", colnames(dummy1lvs))]
+    dummyAll <- as.data.frame(cbind(dummy, dummy1lvsRm999))
+    
+  }else{
+    dummyAll <- as.data.frame(dummy)
+  }
+  
   return(dummyAll)
 }
 

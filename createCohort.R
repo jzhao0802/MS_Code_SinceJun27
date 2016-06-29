@@ -209,20 +209,13 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     # dtCohChar2Fct <- sapply(as.data.frame(dtCoh[, charVars]), factor)
     
     # before turn to dummy, replace NA using 999
-    dtCohCharRepNA <- as.data.frame(t(ldply(lapply(charVars[1:2], function(var){
+    dtCohCharRepNA <- as.data.frame(t(ldply(lapply(charVars, function(var){
       vct <- dtCohChar[, var]
       char <- as.character(vct)
       char[is.na(char)] <- 999
       # fct <- as.factor(char)
       return(char)
     }), quickdf)))
-    dtCohCharRepNA <- lapply(charVars[1:2], function(var){
-      vct <- dtCohChar[, var]
-      char <- as.character(vct)
-      char[is.na(char)] <- 999
-      # fct <- as.factor(char)
-      return(char)
-    })
     names(dtCohCharRepNA) <- charVars
     # turnto factor type
     dtCohChar2Fct <- as.data.frame(unclass(dtCohCharRepNA))
