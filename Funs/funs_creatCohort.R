@@ -369,10 +369,13 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
 #       return("export cohort successfully!\n")
 #     })
 #     cat("\nexport final 6 tables successfully!\n")
+    
+    
     write.table(dtCohFinal1
                 , paste0(outDir, 'dt_', cohortNm, '_', flag, '.csv')
                 , sep=','
                 , row.names=F
+                , na=""
                 )
     cat("\nexport final 1 tables with 5 response successfully!\n")
   }
