@@ -357,20 +357,25 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
                              , dtCoh[, setdiff(varLst_f1, charVars)]) %>%
       as.data.frame(.)
     cat("\ndummy final!\n")
-    re <- lapply(outcomeLst, function(outcome){
-      dtCohFinal1$response <- dtCohFinal1[, outcome]
-      # remove outcome varibles list
-      dtCohFinal <- dtCohFinal1[, -match(outcomeLst, names(dtCohFinal1))]
-      #       dtCoh$tblcoh <- NULL
-      write.table(dtCohFinal
-                  , paste0(outDir, 'dt_', cohortNm, '_', outcome, "_", flag, '.csv')
-                  , sep=','
-                  , row.names = F)
-      return("export cohort successfully!\n")
-    })
-    cat("\nexport final 6 tables successfully!\n")
-    
+#     re <- lapply(outcomeLst, function(outcome){
+#       dtCohFinal1$response <- dtCohFinal1[, outcome]
+#       # remove outcome varibles list
+#       dtCohFinal <- dtCohFinal1[, -match(outcomeLst, names(dtCohFinal1))]
+#       #       dtCoh$tblcoh <- NULL
+#       write.table(dtCohFinal
+#                   , paste0(outDir, 'dt_', cohortNm, '_', outcome, "_", flag, '.csv')
+#                   , sep=','
+#                   , row.names = F)
+#       return("export cohort successfully!\n")
+#     })
+#     cat("\nexport final 6 tables successfully!\n")
+    write.table(dtCohFinal1
+                , paste0(outDir, 'dt_', cohortNm, '_', flag, '.csv')
+                , sep=','
+                , row.names=F
+                )
+    cat("\nexport final 1 tables with 5 response successfully!\n")
   }
   
-  return(re)
+#   return(re)
 }
