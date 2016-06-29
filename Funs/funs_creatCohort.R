@@ -169,7 +169,7 @@ getDummy <- function(temp_fct){
 }
 
 createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
-                           , cohortLst, outcomeLst, bTransf, na_represents
+                           , cohortLst, outcomeLst, na_represents
                            , varDefCati, threshold, bTest){
   
   dt <- read.table(paste0(inDir, inFileNm, inFileExt)
@@ -269,12 +269,12 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     cat('pre_dmts get successfully!\n')
     dim(dtCoh) #[1] 383 412
     varLst_f1 <- names(dtCoh)
-    flag <- "withoutTransf"
+    # flag <- "withoutTransf"
     
     if(bTransf==T){
-      cat('bTransf:', bTransf, '\n')
+#       cat('bTransf:', bTransf, '\n')
       
-      flag <- "withTransf"
+#       flag <- "withTransf"
       varClfList <- varClassify(dtCoh)
       varDefCati <- c("idx_rx", 'gender', 'birth_region', 'init_symptom')
       var2merge <- setdiff(varDefCati, c(varClfList$naVars, varClfList$cansVars, varClfList$biVars))
@@ -297,7 +297,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
         return(rowQuartile)
       }), quickdf)))
       
-      names(dt2quartile) <- var2quartileBnumeric
+      names(dt2quartile) <- paste0('transf_', var2quartileBnumeric)
       cat('\nfor var2quartileBnumeric, brak into quartile successfully!\n')
       
       var2quartileBchar <- setdiff(var2quartile, var2quartileBnumeric)
@@ -305,19 +305,23 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
       dt2mergeGrad <- as.data.frame(t(ldply(lapply(var2quartileBchar
                                                    , function(var)merge4withGradCatiVars(var, dtCoh, threshold))
                                             , quickdf)))
-      names(dt2mergeGrad) <- var2quartileBchar
+      names(dt2mergeGrad) <- paste0("transf_", var2quartileBchar)
+    
       cat("\nfor var2quartileBchar, mergeGrad successfully!\n")
       dt2merge <- as.data.frame(t(ldply(lapply(var2merge
                                                , function(var)merge4CatiVars(var, dtCoh, threshold ))
                                         , quickdf)))
-      names(dt2merge) <- var2merge
+      names(dt2merge) <- paste0("transf_", var2merge)
       cat("\n for var2merge, mergeWithoutGrad successfully!\n")
-      dtCoh <- as.data.frame(
-        cbind(dt2quartile
-              , dt2mergeGrad
-              , dt2merge
-              , dtCoh[, setdiff(varLst_f1, c(var2quartileBnumeric, var2quartileBchar, var2merge))]))
-      
+      dtCohTransfPart <- as.data.frame(
+        cbind(
+          dt2quartile
+          , dt2mergeGrad
+          , dt2merge
+        )
+      )
+      dtCohNotTouchPart <- dtCoh[, setdiff(varLst_f1, c(var2quartileBnumeric, var2quartileBchar, var2merge))]
+
     }
     # transfor all the charact variables into dummy using model.matrix
     
