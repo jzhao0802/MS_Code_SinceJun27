@@ -168,3 +168,209 @@ getDummy <- function(temp_fct){
   return(dummyAll)
 }
 
+createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
+                           , cohortLst, outcomeLst, bTransf, na_represents
+                           , varDefCati, threshold, bTest){
+  
+  dt <- read.table(paste0(inDir, inFileNm, inFileExt)
+                   , sep=','
+                   , header = T
+                   , stringsAsFactors = F
+                   , na.strings = na_represents)
+  cat("data readin successfully!\n")
+  if(bTest == T){
+    dt = dt[1:1000, ]
+  }
+  
+  names(dt) <- tolower(names(dt))
+  dim(dt) #[1] 6501  411
+  
+  # for a certain cohort, for those duplicated ptid , randomly select one line
+  for(cohort in cohortLst){
+    cat('cohort:', cohort, ' start!\n')
+    if(cohort == 5){
+      dtCoh <- dt
+    }else if(cohort %in% 1:4){
+      dtCoh <- dt %>% filter(tblcoh==cohort)
+    }else{
+      stop("wrong input cohort index!\n")
+    }
+    dtCoh <- dtCoh %>%
+      select(-idx_dt) %>%
+      select(-firstdt) %>%
+      select(-idxyr) %>%
+      group_by(new_pat_id) %>%
+      do(sample_n(., 1)) %>%
+      #       select(-new_pat_id) %>%
+      select(-tblcoh)
+    varLst <- names(dtCoh)
+    cat('\nline sample for duplicated patid!\n')
+    
+    cohortNm <- ifelse(cohort==1, "BConti"
+                       , ifelse(cohort==2, "B2B"
+                                , ifelse(cohort==3, "B2Fir"
+                                         , ifelse(cohort==4, "B2Sec"
+                                                  , ifelse(cohort==5, "Cmp", step("wrong cohort index!\n"))))))
+    
+    # calculte pre index dmts in defferent yeas
+    var_preDmt_1 <- grep('^rx_(fing|ga|nat|ext|avo|reb|bet|tecf|teri|alem)_1'
+                         , varLst
+                         , ignore.case = T
+                         , value = T)
+    
+    # calculte pre index dmts in defferent yeas
+    var_preDmt_2 <- grep('^rx_(fing|ga|nat|ext|avo|reb|bet|tecf|teri|alem)_2'
+                         , varLst
+                         , ignore.case = T
+                         , value = T)
+    
+    # calculte pre index dmts in defferent yeas
+    var_preDmt_3 <- grep('^rx_(fing|ga|nat|ext|avo|reb|bet|tecf|teri|alem)_3'
+                         , varLst
+                         , ignore.case = T
+                         , value = T)
+    
+    # calculte pre index dmts in defferent yeas
+    var_preDmt_4 <- grep('^rx_(fing|ga|nat|ext|avo|reb|bet|tecf|teri|alem)_4'
+                         , varLst
+                         , ignore.case = T
+                         , value = T)
+    # make sure that the index DMT type is removed from this counting
+    dtCoh_forDmts <- ldply(lapply(1:nrow(dtCoh), function(irow){
+      row <- dtCoh[irow, ]
+      if(row$idx_rx == 1){
+        row[, grep("^rx_fing_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 2){
+        row[, grep("^rx_ga_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 3){
+        row[, grep("^rx_nat_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 4){
+        row[, grep("^rx_ext_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 5){
+        row[, grep("^rx_bet_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 6){
+        row[, grep("^rx_avo_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 7){
+        row[, grep("^rx_reb_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 10){
+        row[, grep("^rx_tecf_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 11){
+        row[, grep("^rx_teri_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }else if(row$idx_rx == 13){
+        row[, grep("^rx_alem_\\d$", varLst, ignore.case = T, value=T)] = 0
+      }
+      return(row)
+    }), quickdf)
+    
+    dtCoh$pre_dmts_1 <- apply(dtCoh_forDmts[, var_preDmt_1], 1, sum, na.rm=T)
+    dtCoh$pre_dmts_2 <- apply(dtCoh_forDmts[, var_preDmt_2], 1, sum, na.rm=T)
+    dtCoh$pre_dmts_3 <- apply(dtCoh_forDmts[, var_preDmt_3], 1, sum, na.rm=T)
+    dtCoh$pre_dmts_4 <- apply(dtCoh_forDmts[, var_preDmt_4], 1, sum, na.rm=T)
+    cat('pre_dmts get successfully!\n')
+    dim(dtCoh) #[1] 383 412
+    varLst_f1 <- names(dtCoh)
+    flag <- "withoutTransf"
+    
+    if(bTransf==T){
+      cat('bTransf:', bTransf, '\n')
+      
+      flag <- "withTransf"
+      varClfList <- varClassify(dtCoh)
+      varDefCati <- c("idx_rx", 'gender', 'birth_region', 'init_symptom')
+      var2merge <- setdiff(varDefCati, c(varClfList$naVars, varClfList$cansVars, varClfList$biVars))
+      
+      # new_pat_id should not be transformed
+      var2quartile <- setdiff(c(varClfList$catVars, varClfList$contVars), c(var2merge, varClfList$biVars, 'new_pat_id'))
+      var2quartileBnumeric <- setdiff(var2quartile, varClfList$charVars)
+      
+      #     temp <- with(dtCoh[, var2quartileBnumeric], cut(var2quartileBnumeric, 
+      #                                     breaks=quantile(var2quartileBnumeric, probs=seq(0,1, by=0.25), na.rm=TRUE), 
+      #                                     include.lowest=TRUE))
+      dtCoh <- as.data.frame(dtCoh)
+      
+      dt2quartile <- as.data.frame(t(ldply(lapply(var2quartileBnumeric, function(var){
+        
+        varVct <- dtCoh[, var]
+        rowQuartile <- as.character(cut(varVct
+                                        , breaks=unique(quantile(varVct, probs=seq(0, 1, by=1/4), na.rm=T))
+                                        , include.lowest = T))
+        return(rowQuartile)
+      }), quickdf)))
+      
+      names(dt2quartile) <- var2quartileBnumeric
+      cat('\nfor var2quartileBnumeric, brak into quartile successfully!\n')
+      
+      var2quartileBchar <- setdiff(var2quartile, var2quartileBnumeric)
+      
+      dt2mergeGrad <- as.data.frame(t(ldply(lapply(var2quartileBchar
+                                                   , function(var)merge4withGradCatiVars(var, dtCoh, threshold))
+                                            , quickdf)))
+      names(dt2mergeGrad) <- var2quartileBchar
+      cat("\nfor var2quartileBchar, mergeGrad successfully!\n")
+      dt2merge <- as.data.frame(t(ldply(lapply(var2merge
+                                               , function(var)merge4CatiVars(var, dtCoh, threshold ))
+                                        , quickdf)))
+      names(dt2merge) <- var2merge
+      cat("\n for var2merge, mergeWithoutGrad successfully!\n")
+      dtCoh <- as.data.frame(
+        cbind(dt2quartile
+              , dt2mergeGrad
+              , dt2merge
+              , dtCoh[, setdiff(varLst_f1, c(var2quartileBnumeric, var2quartileBchar, var2merge))]))
+      
+    }
+    # transfor all the charact variables into dummy using model.matrix
+    
+    varTypeLst <- getVarType(dt=dtCoh, varLst = colnames(dtCoh))
+    charVars <- varTypeLst$charVars
+    if(bTransf==T){
+      numVars <- varTypeLst$numVars
+      b2dummy <- sapply(dtCoh[,numVars], function(x){
+        lvs <- unique(x)
+        length(setdiff(lvs, c(0, 1, NA))) > 0 & sum(!is.na(lvs)) < 3
+      })
+      varNumB2dummy <- setdiff(numVars[b2dummy], "new_pat_id")
+      
+      charVars <- c(charVars, varNumB2dummy)
+      cat('\n for bTransf==T, add varNumB2dummy into charVars wich will be dummy later!\n')
+    }
+    # other numeric columns should be transformed into dummy
+    
+    dtCohChar <- as.data.frame(dtCoh[, charVars])
+    
+    # dtCohChar2Fct <- sapply(as.data.frame(dtCoh[, charVars]), factor)
+    
+    # before turn to dummy, replace NA using 999
+    dtCohCharRepNA <- as.data.frame(t(ldply(lapply(charVars, function(var){
+      vct <- dtCohChar[, var]
+      char <- as.character(vct)
+      char[is.na(char)] <- 999
+      # fct <- as.factor(char)
+      return(char)
+    }), quickdf)))
+    names(dtCohCharRepNA) <- charVars
+    # turnto factor type
+    dtCohChar2Fct <- as.data.frame(unclass(dtCohCharRepNA))
+    
+    dtCohChar2Fct2Dummy <- getDummy(dtCohChar2Fct)
+    dtCohFinal1 <- bind_cols(dtCohChar2Fct2Dummy
+                             , dtCoh[, setdiff(varLst_f1, charVars)]) %>%
+      as.data.frame(.)
+    cat("\ndummy final!\n")
+    re <- lapply(outcomeLst, function(outcome){
+      dtCohFinal1$response <- dtCohFinal1[, outcome]
+      # remove outcome varibles list
+      dtCohFinal <- dtCohFinal1[, -match(outcomeLst, names(dtCohFinal1))]
+      #       dtCoh$tblcoh <- NULL
+      write.table(dtCohFinal
+                  , paste0(outDir, 'dt_', cohortNm, '_', outcome, "_", flag, '.csv')
+                  , sep=','
+                  , row.names = F)
+      return("export cohort successfully!\n")
+    })
+    cat("\nexport final 6 tables successfully!\n")
+    
+  }
+  
+  return(re)
+}
