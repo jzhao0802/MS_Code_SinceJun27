@@ -14,12 +14,12 @@ main.timeStamp <- as.character(Sys.time())
 main.timeStamp <- gsub(":", ".", main.timeStamp)  # replace ":" by "."
 main.outDir <- paste("./03_Result/",  main.timeStamp, "/", sep = '')
 dir.create(main.outDir, showWarnings = TRUE, recursive = TRUE, mode = "0777")
-main.bCati <- F
+main.bTransf <- F
 main.bTest <- F
 main.inFileNm <- "MS_decsupp_analset_20160614"
 main.inFileExt <- ".csv"
 
-main.cohortLst <- 1:6
+main.cohortLst <- 1:3
 
 main.outcomeLst <- c("edssprog"
                      , 'edssconf3'
@@ -47,8 +47,8 @@ varDefCati <- main.varDefCati
 threshold4merge <- main.threshold4merge
 
 createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
-                           , cohortLst, outcomeLst, bCati, na_represents
-                           , varDefCati, threshold4merge){
+                           , cohortLst, outcomeLst, bTransf, na_represents
+                           , varDefCati, threshold4merge, bTest){
 
   dt <- read.table(paste0(inDir, inFileNm, inFileExt)
                    , sep=','
@@ -204,18 +204,25 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     
     charVars <- c(charVars, varNumB2dummy)
     
-    dtCohChar <- dtCoh[, charVars]
+    dtCohChar <- as.data.frame(dtCoh[, charVars])
     
     # dtCohChar2Fct <- sapply(as.data.frame(dtCoh[, charVars]), factor)
     
     # before turn to dummy, replace NA using 999
-    dtCohCharRepNA <- as.data.frame(t(ldply(lapply(charVars, function(var){
+    dtCohCharRepNA <- as.data.frame(t(ldply(lapply(charVars[1:2], function(var){
       vct <- dtCohChar[, var]
       char <- as.character(vct)
       char[is.na(char)] <- 999
       # fct <- as.factor(char)
       return(char)
     }), quickdf)))
+    dtCohCharRepNA <- lapply(charVars[1:2], function(var){
+      vct <- dtCohChar[, var]
+      char <- as.character(vct)
+      char[is.na(char)] <- 999
+      # fct <- as.factor(char)
+      return(char)
+    })
     names(dtCohCharRepNA) <- charVars
     # turnto factor type
     dtCohChar2Fct <- as.data.frame(unclass(dtCohCharRepNA))
@@ -243,7 +250,17 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
   return(re)
 }
 
-
+createCohortTb(inDir=main.inDir
+               , inFileNm=main.inFileNm
+               , inFileExt=main.inFileExt
+               , outDir=main.outDir
+               , cohortLst=main.cohortLst
+               , outcomeLst=main.outcomeLst
+               , bTransf=main.bTransf
+               , na_represents=main.na_represents
+               , varDefCati=main.varDefCati
+               , threshold4merge=main.threshold4merge
+               , bTest=main.bTest)
 
 
 
