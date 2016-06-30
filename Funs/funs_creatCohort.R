@@ -287,7 +287,15 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
       for(yr in 1:4){
         qcFlag <- unlist(lapply(1:10, function(rxIdx){
           dtCohRx <- dtCoh %>% filter(idx_rx==rxIdx & paste0(rxLst, yr)[rxIdx]==yr)
-          eval(parse(text=paste0("flag <- apply(dtCohRx[, var_preDmt_", yr, "], 1, sum, na.rm=T) -1 == dtCohRx$pre_dmts_", yr)))
+          eval(
+            parse(
+              text=
+                paste0("flag <- apply(dtCohRx[, var_preDmt_"
+                       , yr
+                       , "], 1, sum, na.rm=T) -1 == dtCohRx$pre_dmts_"
+                       , yr)
+              )
+            )
           return(flag)
         }))
         if(any(!qcFlag)){
