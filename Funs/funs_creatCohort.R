@@ -272,13 +272,29 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCoh$pre_dmts_3 <- apply(dtCoh_forDmts[, var_preDmt_3], 1, sum, na.rm=T)
     dtCoh$pre_dmts_4 <- apply(dtCoh_forDmts[, var_preDmt_4], 1, sum, na.rm=T)
     if(bQcMode == T){
-      if(all(dtCoh$pre_dmts_1 > apply(dtCoh[, var_preDmt_1], 1, sum, na.rm=T))
-         & all(dtCoh$pre_dmts_2 > apply(dtCoh[, var_preDmt_2], 1, sum, na.rm=T))
-         & all(dtCoh$pre_dmts_3 > apply(dtCoh[, var_preDmt_3], 1, sum, na.rm=T))
-         & all(dtCoh$pre_dmts_4 > apply(dtCoh[, var_preDmt_4], 1, sum, na.rm=T))
+      if(any(dtCoh$pre_dmts_1 < apply(dtCoh[, var_preDmt_1], 1, sum, na.rm=T))
+         & all(dtCoh$pre_dmts_2 < apply(dtCoh[, var_preDmt_2], 1, sum, na.rm=T))
+         & all(dtCoh$pre_dmts_3 < apply(dtCoh[, var_preDmt_3], 1, sum, na.rm=T))
+         & all(dtCoh$pre_dmts_4 < apply(dtCoh[, var_preDmt_4], 1, sum, na.rm=T))
          ){
         stop("the pre Dmts number is wrong!\n\n")
       }
+      rxLst <- c("rx_fing_", "rx_ga_"
+                 , "rx_nat_", "rx_ext_"
+                 , "rx_bet_", "rx_avo_"
+                 , "rx_reb_", "rx_tecf_"
+                 , "rx_teri_", "rx_alem_")
+      for(yr in 1:4){
+        qcFlag <- unlist(lapply(1:10, function(rxIdx){
+          dtCohRx <- dtCoh %>% filter(idx_rx==rxIdx & paste0(rxLst, yr)[rxIdx]==yr)
+          eval(parse(text=paste0("flag <- apply(dtCohRx[, var_preDmt_", yr, "], 1, sum, na.rm=T) -1 == dtCohRx$pre_dmts_", yr)))
+          return(flag)
+        }))
+        if(any(!qcFlag)){
+          stop("the preDmts number is wrong!\n\n")
+        }
+      }
+      
     }
     cat('pre_dmts get successfully!\n')
     dim(dtCoh) #[1] 383 412
