@@ -58,19 +58,8 @@ temp_re <- createCohortTb(inDir=main.inDir
                           , na_represents=main.na_represents
                           , varDefCati=main.varDefCati
                           , threshold=main.threshold4merge
-                          , bTest=main.bTest)
-
-temp_re <- createCohortTb(inDir=main.inDir
-                          , inFileNm=main.inFileNm
-                          , inFileExt=main.inFileExt
-                          , outDir=main.outDir
-                          , cohortLst=main.cohortLst
-                          , outcomeLst=main.outcomeLst
-                          , bTransf=T
-                          , na_represents=main.na_represents
-                          , varDefCati=main.varDefCati
-                          , threshold=main.threshold4merge
-                          , bTest=main.bTest)
+                          , bTest=main.bTest
+                          , bQcMode = T)
 
 
 

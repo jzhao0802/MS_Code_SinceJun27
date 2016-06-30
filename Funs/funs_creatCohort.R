@@ -207,7 +207,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     cat('\nline sample for duplicated patid!\n')
     
     if(bQcMode==T){
-      if(nrow(dtCoh)!=distinct(dtCoh$new_pat_id)){
+      if(nrow(dtCoh)!=length(unique((dtCoh$new_pat_id)))){
         stop("unique patient id select wrong!\n\n")
       }
     }
@@ -337,9 +337,9 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     
     varTypeLst <- getVarType(dt=dtCoh, varLst = colnames(dtCoh))
     charVars <- varTypeLst$charVars
-    if(bQcModel==T){
-      type <- sapply(dtCoh[, charVar], function(vct)class(vct))
-      if(all(type %in% c("character", "factor"))){
+    if(bQcMode==T){
+      type <- sapply(dtCoh[, charVars], function(vct)class(vct))
+      if(any(!type %in% c("character", "factor"))){
         stop("the character and factor variable list is not right!\n\n")
       }
     }
@@ -371,7 +371,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     }), quickdf)))
     names(dtCohCharRepNA) <- charVars
     
-    if(bQcModel==T){
+    if(bQcMode==T){
       naCnt <- apply(apply(dtCohCharRepNA, 2, is.na), 2, sum)
       if(all(naCnt) != 0){
         stop("NAs have not been competely replaced in character columns!\n")
