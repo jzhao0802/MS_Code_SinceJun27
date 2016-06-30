@@ -285,6 +285,12 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     varLst_f1 <- names(dtCoh)
     flag <- "withoutTransf"
     
+    if(bQcMode==T){
+      if(any(c("idx_dt", "firstdt", 'idxyr', 'tblcoh') %in% varLst_f1)){
+        stop("the 4 variables, idx_dt, firstdt, idxyr, tblcoh, have not been removed completely!\n")
+      }  
+    }
+    
     if(bTransf==T){
       cat('bTransf:', bTransf, '\n')
       
@@ -392,6 +398,7 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
                              , dtCoh[, setdiff(varLst_f1, charVars)]) %>%
       as.data.frame(.)
     cat("\ndummy final!\n")
+    
 #     re <- lapply(outcomeLst, function(outcome){
 #       dtCohFinal1$response <- dtCohFinal1[, outcome]
 #       # remove outcome varibles list
