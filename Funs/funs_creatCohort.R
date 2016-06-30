@@ -170,7 +170,7 @@ getDummy <- function(temp_fct){
 
 createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
                            , cohortLst, outcomeLst, bTransf, na_represents
-                           , varDefCati, threshold, bTest){
+                           , varDefCati, threshold, bTest, bQcMode){
   
   dt <- read.table(paste0(inDir, inFileNm, inFileExt)
                    , sep=','
@@ -206,6 +206,11 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     varLst <- names(dtCoh)
     cat('\nline sample for duplicated patid!\n')
     
+    if(bQcMode==T){
+      if(nrow(dtCoh)!=distinct(dtCoh$new_pat_id)){
+        stop("unique patient id select wrong!\n\n")
+      }
+    }
     cohortNm <- ifelse(cohort==1, "BConti"
                        , ifelse(cohort==2, "B2B"
                                 , ifelse(cohort==3, "B2Fir"
@@ -266,6 +271,15 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCoh$pre_dmts_2 <- apply(dtCoh_forDmts[, var_preDmt_2], 1, sum, na.rm=T)
     dtCoh$pre_dmts_3 <- apply(dtCoh_forDmts[, var_preDmt_3], 1, sum, na.rm=T)
     dtCoh$pre_dmts_4 <- apply(dtCoh_forDmts[, var_preDmt_4], 1, sum, na.rm=T)
+    if(bQcMode == T){
+      if(all(dtCoh$pre_dmts_1 > apply(dtCoh[, var_preDmt_1], 1, sum, na.rm=T))
+         & all(dtCoh$pre_dmts_2 > apply(dtCoh[, var_preDmt_2], 1, sum, na.rm=T))
+         & all(dtCoh$pre_dmts_3 > apply(dtCoh[, var_preDmt_3], 1, sum, na.rm=T))
+         & all(dtCoh$pre_dmts_4 > apply(dtCoh[, var_preDmt_4], 1, sum, na.rm=T))
+         ){
+        stop("the pre Dmts number is wrong!\n\n")
+      }
+    }
     cat('pre_dmts get successfully!\n')
     dim(dtCoh) #[1] 383 412
     varLst_f1 <- names(dtCoh)
@@ -323,6 +337,13 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     
     varTypeLst <- getVarType(dt=dtCoh, varLst = colnames(dtCoh))
     charVars <- varTypeLst$charVars
+    if(bQcModel==T){
+      type <- sapply(dtCoh[, charVar], function(vct)class(vct))
+      if(all(type %in% c("character", "factor"))){
+        stop("the character and factor variable list is not right!\n\n")
+      }
+    }
+    
     if(bTransf==T){
       numVars <- varTypeLst$numVars
       b2dummy <- sapply(dtCoh[,numVars], function(x){
@@ -349,6 +370,13 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
       return(char)
     }), quickdf)))
     names(dtCohCharRepNA) <- charVars
+    
+    if(bQcModel==T){
+      naCnt <- apply(apply(dtCohCharRepNA, 2, is.na), 2, sum)
+      if(all(naCnt) != 0){
+        stop("NAs have not been competely replaced in character columns!\n")
+      }
+    }
     # turnto factor type
     dtCohChar2Fct <- as.data.frame(unclass(dtCohCharRepNA))
     
