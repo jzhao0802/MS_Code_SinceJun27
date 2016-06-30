@@ -381,6 +381,13 @@ createCohortTb <- function(inDir, inFileNm, inFileExt, outDir
     dtCohChar2Fct <- as.data.frame(unclass(dtCohCharRepNA))
     
     dtCohChar2Fct2Dummy <- getDummy(dtCohChar2Fct)
+    
+    if(bQcMode==T){
+      otherLevExists <- sapply(dtCohChar2Fct2Dummy, function(vct)length(setdiff(unique(vct), c(0, 1)))>1)
+      if(sum(otherLevExists)>1){
+        stop("not all character variables are turned to 0 1 varaibles!\n")
+      }
+    }
     dtCohFinal1 <- bind_cols(dtCohChar2Fct2Dummy
                              , dtCoh[, setdiff(varLst_f1, charVars)]) %>%
       as.data.frame(.)
